@@ -130,6 +130,19 @@ program.command('compare-lighthouse')
         }
     });
 
+// start-browser
+program.command('start-browser <wprFilepath>')
+    .description('start browser with wpr')
+    .action(async function (this: Command, rawWprFilepath: string) {
+        setCurrentCommand(this);
+
+        const wprFilepath = path.isAbsolute(rawWprFilepath) ? rawWprFilepath : path.resolve(rawWprFilepath);
+
+        const api = new CommandApi(logger);
+
+        await api.startBrowserWithWpr(process.cwd(), wprFilepath);
+    });
+
 program.parse(process.argv);
 
 if (!currentCommand.length) {
