@@ -63,6 +63,7 @@ export class Api {
             headless: true,
             ignoreHTTPSErrors: true,
             wpr: null,
+            imagesEnabled: true,
         };
     }
 
@@ -75,6 +76,8 @@ export class Api {
             cpuThrottling: null,
             cacheEnabled: null,
             waitUntil: "networkidle0",
+            javascriptEnabled: true,
+            cssFilesEnabled: true,
         };
     }
 
@@ -370,6 +373,7 @@ export class Api {
                 httpPort,
                 httpsPort,
             },
+            imagesEnabled: true,
         });
     }
 
@@ -380,6 +384,7 @@ export class Api {
             sites: ISiteWithWprArchiveId[];
             iterations: number;
             results? : any // TODO
+            imagesEnabled: boolean,
         },
     ): Promise<{}> {
         const nodejsMajorVersion = Number(process.versions.node.split('.')[0]);
@@ -433,6 +438,7 @@ export class Api {
                     httpPort,
                     httpsPort,
                 },
+                imagesEnabled: options.imagesEnabled,
             });
 
             const {hostname, port} = url.parse(browser.browser.wsEndpoint());
@@ -621,6 +627,9 @@ export class Api {
                     networkThrottling: config.options.networkThrottling,
                     cpuThrottling: config.options.cpuThrottling,
                     cacheEnabled: config.options.cacheEnabled,
+                    javascriptEnabled: config.options.javascriptEnabled,
+                    imagesEnabled: config.options.imagesEnabled,
+                    cssFilesEnabled: config.options.cssFilesEnabled,
                 },
             };
 

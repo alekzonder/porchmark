@@ -188,6 +188,8 @@ export class CommandApi {
         const compareReleasesConfig = api.prepareCompareReleasesConfig(rawConfig);
         await api.saveConfig(compareWorkDir, "compare-releases-cyclic-prepared-config", compareReleasesConfig);
 
+        const {options} = compareReleasesConfig;
+
         const recordCount = rawConfig.options.recordCount;
         const cycleCount = rawConfig.options.cycleCount;
 
@@ -198,11 +200,11 @@ export class CommandApi {
                 ...api.getBaseBrowserLaunchOptions(),
                 headless: config.headless,
             };
-            const pageProfile = {
+            const recordWprPageProfile: IPageProfile = {
                 ...api.getBasePageProfile(),
-                networkThrottling: compareReleasesConfig.options.networkThrottling,
-                cpuThrottling: compareReleasesConfig.options.cpuThrottling,
-                cacheEnabled: compareReleasesConfig.options.cacheEnabled,
+                networkThrottling: options.networkThrottling,
+                cpuThrottling: options.cpuThrottling,
+                cacheEnabled: options.cacheEnabled,
             };
 
             if (rawConfig.stages.recordWpr) {
@@ -210,7 +212,7 @@ export class CommandApi {
                     recordCount,
                     sites: config.sites,
                     browserLaunchOptions,
-                    pageProfile,
+                    pageProfile: recordWprPageProfile,
                 });
             }
 
@@ -258,6 +260,12 @@ export class CommandApi {
             const bestSiteWithWprPairs = await api.prepareSitesWithWprArchiveId(config.sites, bestPairs);
             logger.info("bestSiteWithWprPairs:", bestSiteWithWprPairs);
 
+            const openPagePageProfile = {
+                ...recordWprPageProfile,
+                javascriptEnabled: options.javascriptEnabled,
+                cssFilesEnabled: options.cssFilesEnabled,
+            };
+
             if (rawConfig.stages.compareMetrics) {
                 const dataProcessor = api.createDataProcessor(config.sites);
                 let id = 0;
@@ -267,7 +275,7 @@ export class CommandApi {
                         dataProcessor,
                         sites,
                         browserLaunchOptions,
-                        pageProfile,
+                        pageProfile: openPagePageProfile,
                         iterations: compareReleasesConfig.options.iterations,
                         warmIterations: rawConfig.options.warmIterations,
                         useWpr: config.useWpr,
@@ -342,6 +350,7 @@ export class CommandApi {
                     sites,
                     iterations: config.iterations,
                     results,
+                    imagesEnabled: compareReleasesConfig.options.imagesEnabled,
                 });
 
                 id++;

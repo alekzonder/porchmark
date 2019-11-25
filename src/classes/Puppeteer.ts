@@ -64,6 +64,7 @@ export interface IBrowserLaunchOptions {
         httpPort: number;
         httpsPort: number;
     };
+    imagesEnabled: boolean;
 }
 
 export type NETWORK_PRESET_TYPES =
@@ -81,6 +82,8 @@ export interface IPageProfile {
     };
     cacheEnabled: null | boolean;
     waitUntil: puppeteer.LoadEvent;
+    javascriptEnabled: boolean;
+    cssFilesEnabled: boolean;
 }
 
 export class PuppeteerApi {
@@ -98,6 +101,10 @@ export class PuppeteerApi {
                 '--ignore-certificate-errors-spki-list=PhrPvGIaAMmd29hj8BCZOq096yj7uMpRNHpn5PDxI6I=',
                 `--host-resolver-rules="MAP *:80 127.0.0.1:${options.wpr.httpPort},MAP *:443 127.0.0.1:${options.wpr.httpsPort},EXCLUDE localhost"`,
             );
+        }
+
+        if (options.imagesEnabled === false) {
+            args.push('--blink-settings=imagesEnabled=false');
         }
 
         const launchOptions = {
@@ -193,6 +200,27 @@ export class PageApi {
         // this._logger.debug('open page: ', this._site.url);
 
         this._page = await this._browser.newPage();
+
+        if (this._profile.javascriptEnabled === false) {
+            await this._page.setJavaScriptEnabled(false);
+        }
+
+        if (this._profile.cssFilesEnabled === false) {
+            await this._page.setRequestInterception(true);
+
+            this._page.on('request', (req) => {
+                if(
+                    req.resourceType() == 'stylesheet' ||
+                    req.resourceType() == 'font' ||
+                    req.resourceType() == 'image'
+                ) {
+                    req.abort();
+                }
+                else {
+                    req.continue();
+                }
+            });
+        }
 
         this._page.setDefaultTimeout(DEFAULT_PAGE_NAVIGATION_TIMEOUT); // TODO move into options
 

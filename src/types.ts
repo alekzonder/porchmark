@@ -60,6 +60,9 @@ export interface ICompareConfig {
         rate: number;
     };
     cacheEnabled: null | boolean;
+    javascriptEnabled: boolean,
+    imagesEnabled: boolean,
+    cssFilesEnabled: boolean,
     // waitUntil: LoadEvent;
 }
 
@@ -81,6 +84,9 @@ export interface IRawCompareReleasesConfig {
         cacheEnabled: null | boolean;
         selectWprMethod: string;
         singleProcess: boolean;
+        javascriptEnabled: boolean,
+        imagesEnabled: boolean,
+        cssFilesEnabled: boolean,
     };
     hosts: Array<{name: string; host: string;}>;
     urls: Array<{name: string; url: string;}>;
@@ -108,7 +114,9 @@ export interface ICompareReleasesConfig {
             rate: number;
         };
         cacheEnabled: null | boolean;
-
+        javascriptEnabled: boolean,
+        imagesEnabled: boolean,
+        cssFilesEnabled: boolean,
     };
     comparations: Array<IComparation>;
 }
