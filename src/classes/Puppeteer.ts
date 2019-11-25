@@ -1,5 +1,9 @@
 import * as path from "path";
 import puppeteer from "puppeteer";
+import unified = require('unified');
+// @ts-ignore TODO types
+import rehypeParse = require('rehype-parse');
+import traverse = require('traverse');
 
 import {Logger} from "@/lib/logger";
 import {ISite, OriginalMetrics} from "@/types";
@@ -84,6 +88,15 @@ export interface IPageProfile {
     waitUntil: puppeteer.LoadEvent;
     javascriptEnabled: boolean;
     cssFilesEnabled: boolean;
+}
+
+export interface IPageStructureSizes {
+    root: number;
+    script: number;
+    style: number;
+    scripts: {
+        [index: string]: number;
+    };
 }
 
 export class PuppeteerApi {
@@ -287,5 +300,86 @@ export class PageApi {
         return this.page.evaluate(() => {
             return performance.getEntries().map(e => e.toJSON());
         });
+    }
+
+    public getHTML(): Promise<string> {
+        return this.page.evaluate(() => {
+            return document.documentElement.outerHTML;
+        });
+    }
+
+    public async getPageStructureSizes(): Promise<IPageStructureSizes> {
+        const html = await this.getHTML();
+
+        var tree = unified()
+            .use(rehypeParse)
+            .parse(html);
+
+        let incrementId = 1;
+
+        // TODO types
+        const elements: {[index: string]: any} = {};
+
+        traverse(tree).forEach(function (node) {
+            if (node && typeof node.type !== 'undefined' && typeof node.position != 'undefined') {
+                const id = incrementId;
+                incrementId++;
+
+                let parentId = null;
+
+                if (this.parent) {
+                    if (Array.isArray(this.parent.node) && this.parent.parent) {
+                        parentId = this.parent.parent.node.id;
+                    } else {
+                        parentId = this.parent.node.id;
+                    }
+                }
+
+                const updatedNode = {
+                    id,
+                    parentId,
+                    ...node,
+                };
+
+                this.update(updatedNode);
+
+                elements[id] = updatedNode;
+            }
+        });
+
+        const sizes: IPageStructureSizes = {
+            root: this._getSizeInBytes(html, elements[1]),
+            script: 0,
+            style: 0,
+            scripts: {},
+        };
+
+        Object.keys(elements).forEach(id => {
+            const node = elements[id];
+
+            if (node.tagName === 'script') {
+                const size = this._getSizeInBytes(html, node);
+                sizes.script += size;
+
+                const scriptType = node.properties && node.properties.type;
+
+                if (!sizes.scripts[scriptType]) {
+                    sizes.scripts[scriptType] = 0;
+                }
+
+                sizes.scripts[scriptType] += size;
+            }
+
+            if (node.tagName === 'style') {
+                const size = this._getSizeInBytes(html, node);
+                sizes.style += size;
+            }
+        });
+
+        return  sizes;
+    }
+
+    private _getSizeInBytes(html: string, node: any) {
+        return Buffer.byteLength(html.substring(node.position.start.offset, node.position.end.offset), 'utf8');
     }
 }
