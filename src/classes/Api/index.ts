@@ -148,6 +148,10 @@ export class Api {
             // reload
             // await page.reload();
 
+            const pageSizes = await page.getPageStructureSizes();
+
+            await fs.writeJson(this._getPageStructureSizesFilepath(workDir, site, id), pageSizes);
+
             // save screenshot
             await page.screenshot(`-${id}`);
             // close page
@@ -1067,6 +1071,10 @@ export class Api {
 
     protected _getLighthouseTableAllFilepath(workDir: string, id: number) {
         return path.resolve(workDir, `lighthouse-table-all-${id}.txt`);
+    }
+
+    protected _getPageStructureSizesFilepath(workDir: string, site: ISite, wprArchiveId: number) {
+        return path.resolve(workDir, `${site.name}-${wprArchiveId}.page-structure-sizes.json`);
     }
 
     protected _sleep(ms: number) {
