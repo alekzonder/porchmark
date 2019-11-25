@@ -133,6 +133,7 @@ export class Api {
                 httpsPort,
             },
             ignoreHTTPSErrors: true,
+            // acceptInsecureCerts: true,
         };
 
         // start puppeteer
@@ -143,8 +144,13 @@ export class Api {
 
             const page = bro.createDesktopOrMobilePage(site.mobile, workDir, pageProfile, site);
 
-            // load page
-            await page.open();
+            try {
+                // load page
+                await page.open();
+            } catch (e) {
+                this._logger.error("retry after page open error", e);
+                await page.open();
+            }
 
             // reload
             // await page.reload();
