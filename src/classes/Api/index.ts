@@ -108,10 +108,23 @@ export class Api {
         return fs.writeJson(configFilepath, config);
     }
 
-    public async recordWpr(
+    public async recordWprWithRetry(
         workDir: string,
         config: IRecordWprConfig,
     ) {
+
+        const hasError = await this.recordWpr(workDir, config);
+
+        if (hasError) {
+            this._logger.warn("retry after record wpr error");
+            await this.recordWpr(workDir, config);
+        }
+    }
+
+    public async recordWpr(
+        workDir: string,
+        config: IRecordWprConfig,
+    ): Promise<boolean> {
         const {id, site, browserLaunchOptions, pageProfile} = config;
         await this.saveConfig(workDir, `${site.name}-${id}.record-wpr`, config);
 
@@ -139,18 +152,20 @@ export class Api {
         // start puppeteer
         const bro = await this._puppeteer.launch(browserLaunchWithWprProfile);
 
+        let hasError = false;
+
         try {
             await wprRecordProcess.start();
 
             const page = bro.createDesktopOrMobilePage(site.mobile, workDir, pageProfile, site);
 
-            try {
-                // load page
-                await page.open();
-            } catch (e) {
-                this._logger.error("retry after page open error", e);
-                await page.open();
-            }
+            // try {
+            // load page
+            await page.open();
+            // } catch (e) {
+            //     this._logger.error("retry after page open error", e);
+            //     await page.open();
+            // }
 
             // reload
             // await page.reload();
@@ -166,6 +181,7 @@ export class Api {
 
             this._logger.info("record wpr complete");
         } catch (e) {
+            hasError = true;
             // TODO throw error
             this._logger.error("record wpr error", e);
         } finally {
@@ -174,6 +190,8 @@ export class Api {
             await wprRecordProcess.stop();
             await wprRecordProcess.wait();
         }
+
+        return hasError;
     }
 
     public async recordOneWprsForManySites(
@@ -189,7 +207,7 @@ export class Api {
         const promises = [];
 
         for (let site of options.sites) {
-            promises.push(this.recordWpr(workDir, {
+            promises.push(this.recordWprWithRetry(workDir, {
                 id: 0,
                 site,
                 browserLaunchOptions,
@@ -212,7 +230,7 @@ export class Api {
         const {recordCount, site, browserLaunchOptions, pageProfile} = options;
 
         for (let id=0; id < recordCount; id++) {
-            await this.recordWpr(workDir, {
+            await this.recordWprWithRetry(workDir, {
                 id,
                 site,
                 browserLaunchOptions,
@@ -235,7 +253,7 @@ export class Api {
         for (let id=0; id < recordCount; id++) {
             const promises = [];
             for (let site of sites) {
-                promises.push(this.recordWpr(workDir, {
+                promises.push(this.recordWprWithRetry(workDir, {
                     id,
                     site,
                     browserLaunchOptions,
