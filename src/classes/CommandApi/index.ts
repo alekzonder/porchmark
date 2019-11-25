@@ -10,6 +10,7 @@ import {IBrowserLaunchOptions, IPageProfile, NETWORK_PRESET_TYPES} from "@/class
 
 import {Api} from "@/classes/Api";
 import compareReleasesConfigSchema from '@/validation/compareReleasesConfig';
+import {IWprPair} from "@/classes/Api/types";
 
 export class CommandApi {
     protected _logger: Logger;
@@ -220,8 +221,16 @@ export class CommandApi {
             const wprs = await api.getWprSizes(config.workDir, config.sites);
             logger.info("wprSizes:");
             wprs.forEach(wpr => {
-                logger.info(`${wpr.filename} size=${wpr.size}`);
+                const sizes = [
+                    `size=${wpr.size}`,
+                    `page=${wpr.pageStructureSizes.root}`,
+                    `script=${wpr.pageStructureSizes.script}`,
+                    `style=${wpr.pageStructureSizes.style}`,
+                ];
+                logger.info(`${wpr.filename} ${sizes.join(', ')}`);
             });
+
+            // bestPairsCloser
             const bestPairsCloser = await api.getBestWprPairsMethodCloser(wprs, config.sites, cycleCount);
             logger.info("bestPairsCloser:");
             bestPairsCloser.forEach((pair, i) => {
@@ -234,9 +243,39 @@ export class CommandApi {
                 } = pair;
                 logger.info(`${i}: a[${aId}]=${aSize} - b[${bId}]=${bSize} = ${diff}`)
             });
+
+            // bestPairsQuantiles
             const bestPairsQuantiles = await api.getBestWprPairsMethodQuantiles(wprs, config.sites, cycleCount);
             logger.info("bestPairsQuantiles:");
             bestPairsQuantiles.forEach((pair, i) => {
+                const {
+                    aWprArchiveId: aId,
+                    aWprArchiveSize: aSize,
+                    bWprArchiveId: bId,
+                    bWprArchiveSize: bSize,
+                    diff
+                } = pair;
+                logger.info(`${i}: a[${aId}]=${aSize} - b[${bId}]=${bSize} = ${diff}`)
+            });
+
+            // bestPairsCloserHtmlCloser
+            const bestPairsCloserHtmlCloser = await api.getBestWprPairsMethodHtmlCloser(wprs, config.sites, cycleCount);
+            logger.info("bestPairsCloserHtmlCloser:");
+            bestPairsCloserHtmlCloser.forEach((pair, i) => {
+                const {
+                    aWprArchiveId: aId,
+                    aWprArchiveSize: aSize,
+                    bWprArchiveId: bId,
+                    bWprArchiveSize: bSize,
+                    diff
+                } = pair;
+                logger.info(`${i}: a[${aId}]=${aSize} - b[${bId}]=${bSize} = ${diff}`)
+            });
+
+            // bestPairsCloserScriptCloser
+            const bestPairsCloserScriptCloser = await api.getBestWprPairsMethodScriptCloser(wprs, config.sites, cycleCount);
+            logger.info("bestPairsCloserScriptCloser:");
+            bestPairsCloserScriptCloser.forEach((pair, i) => {
                 const {
                     aWprArchiveId: aId,
                     aWprArchiveSize: aSize,
@@ -251,14 +290,30 @@ export class CommandApi {
                 ? rawConfig.options.selectWprMethod
                 : "bestPairsQuantiles";
             logger.info(`using ${selectWprMethod}`);
-            const bestPairs = selectWprMethod === 'bestPairsCloser' ? bestPairsCloser : bestPairsQuantiles;
 
+            let bestPairs: IWprPair[] = [];
+
+            switch (selectWprMethod) {
+                case 'bestPairsQuantiles':
+                    bestPairs = bestPairsQuantiles;
+                    break;
+                case 'bestPairsCloser':
+                    bestPairs = bestPairsCloser;
+                    break;
+                case 'bestPairsCloserHtmlCloser':
+                    bestPairs = bestPairsCloserHtmlCloser;
+                    break;
+                case 'bestPairsCloserScriptCloser':
+                    bestPairs = bestPairsCloserScriptCloser;
+                    break;
+
+            }
             if (!bestPairs.length) {
                 throw new Error('cannot compare releases, no bestPairs, no WPR files');
             }
 
             const bestSiteWithWprPairs = await api.prepareSitesWithWprArchiveId(config.sites, bestPairs);
-            logger.info("bestSiteWithWprPairs:", bestSiteWithWprPairs);
+            logger.info("bestSiteWithWprPairs:\n", bestSiteWithWprPairs);
 
             const openPagePageProfile = {
                 ...recordWprPageProfile,

@@ -1,5 +1,5 @@
 import {ISite, ISiteWithWprArchiveId} from "@/types";
-import {BrowserApi, IBrowserLaunchOptions, IPageProfile} from "@/classes/Puppeteer";
+import {BrowserApi, IBrowserLaunchOptions, IPageProfile, IPageStructureSizes} from "@/classes/Puppeteer";
 import {DataProcessor} from "@/lib/dataProcessor";
 
 export interface IRecordWprConfig {
@@ -47,6 +47,7 @@ export interface IWprSize {
     siteName: string;
     wprArchiveId: number;
     size: number;
+    pageStructureSizes: IPageStructureSizes;
 }
 
 export interface IWprPair {

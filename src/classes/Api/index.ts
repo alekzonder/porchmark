@@ -656,27 +656,36 @@ export class Api {
         return new DataProcessor(sites.map(s => s.url), {} as any);
     }
 
-    public async getWprSizes(workDir: string, sites: ISite[]) {
+    public async getWprSizes(workDir: string, sites: ISite[]): Promise<IWprSize[]> {
         const files = await fs.readdir(workDir);
         const wprFiles = files.filter((filename) => /.*\.wprgo$/.exec(filename));
 
         const parseFilenameRegex = /(.*)-(\d+)\.wprgo/;
 
-        const wprs: IWprSize[] = wprFiles
-            .map((filename: string) => {
+        const wprs: IWprSize[] = await Promise.all(wprFiles
+            .map(async (filename: string) => {
                 const match = parseFilenameRegex.exec(filename);
 
                 if (!match) {
                     throw new Error(`cant parse wpr filename ${filename}`);
                 }
 
+                const siteName = match[1];
+                const wprArchiveId = Number(match[2]);
+
+                const pageStructureSizes = await fs.readJson(
+                    this._getPageStructureSizesFilepath(workDir, {name: siteName, url: ''}, wprArchiveId)
+                );
+
+
                 return {
                     filename,
-                    siteName: match[1],
-                    wprArchiveId: Number(match[2]),
+                    siteName,
+                    wprArchiveId,
                     size: -1, // TODO
+                    pageStructureSizes,
                 };
-            });
+            }));
 
         const sizes = await Promise.all(
             wprs.map(({filename}) => this._getFileSize(path.resolve(workDir, filename)))
@@ -688,10 +697,6 @@ export class Api {
             .map((w, i) => ({...w, size: sizes[i]}))
             // filter wprs for sites
             .filter((w) => siteNames.includes(w.siteName));
-    }
-
-    public getBestWprPairs(wprs: IWprSize[], sites: ISite[], count: number) {
-        return this.getBestWprPairsMethodQuantiles(wprs, sites, count);
     }
 
     public async validate<T>(data: any, schema: joi.Schema): Promise<T> {
@@ -780,6 +785,112 @@ export class Api {
                     bWprArchiveId: b[j].wprArchiveId,
                     bWprArchiveSize: b[j].size,
                     diff: b[j].size - a[i].size
+                });
+            });
+        });
+
+        diff.sort((a, b) => {
+            return Math.abs(a.diff) - Math.abs(b.diff);
+        });
+
+        const result = [];
+
+        for (let i = 0; i < count; i++) {
+            const selected = diff.shift();
+
+            if (!selected) {
+                // TODO fail if no data
+                continue;
+            }
+
+            result.push(selected);
+
+            aSelected.push(selected.aWprArchiveId);
+            bSelected.push(selected.bWprArchiveId);
+
+            diff = diff.filter(v => {
+                return !aSelected.includes(v.aWprArchiveId) && !bSelected.includes(v.bWprArchiveId);
+            });
+        }
+
+        return result;
+    }
+
+    public getBestWprPairsMethodHtmlCloser(wprs: IWprSize[], sites: ISite[], count: number): IWprPair[] {
+        if (sites.length > 2) {
+            throw new Error("cant getBestWprPairs if sites.length > 2");
+        }
+
+        const a = wprs.filter(w => w.siteName === sites[0].name);
+        const b = wprs.filter(w => w.siteName === sites[1].name);
+
+        let diff: IWprPair[] = [];
+        const aSelected: number[] = [];
+        const bSelected: number[] = [];
+
+        a.forEach((_, i) => {
+            b.forEach((_, j) => {
+                const aSize = a[i].pageStructureSizes.root;
+                const bSize = b[j].pageStructureSizes.root;
+                diff.push({
+                    aWprArchiveId: a[i].wprArchiveId,
+                    aWprArchiveSize: aSize,
+                    bWprArchiveId: b[j].wprArchiveId,
+                    bWprArchiveSize: bSize,
+                    diff: bSize - aSize,
+                });
+            });
+        });
+
+        diff.sort((a, b) => {
+            return Math.abs(a.diff) - Math.abs(b.diff);
+        });
+
+        const result = [];
+
+        for (let i = 0; i < count; i++) {
+            const selected = diff.shift();
+
+            if (!selected) {
+                // TODO fail if no data
+                continue;
+            }
+
+            result.push(selected);
+
+            aSelected.push(selected.aWprArchiveId);
+            bSelected.push(selected.bWprArchiveId);
+
+            diff = diff.filter(v => {
+                return !aSelected.includes(v.aWprArchiveId) && !bSelected.includes(v.bWprArchiveId);
+            });
+        }
+
+        return result;
+    }
+
+    public getBestWprPairsMethodScriptCloser(wprs: IWprSize[], sites: ISite[], count: number): IWprPair[] {
+        if (sites.length > 2) {
+            throw new Error("cant getBestWprPairs if sites.length > 2");
+        }
+
+        const a = wprs.filter(w => w.siteName === sites[0].name);
+        const b = wprs.filter(w => w.siteName === sites[1].name);
+
+        let diff: IWprPair[] = [];
+        const aSelected: number[] = [];
+        const bSelected: number[] = [];
+
+        a.forEach((_, i) => {
+            b.forEach((_, j) => {
+                const aSize = a[i].pageStructureSizes.script;
+                const bSize = b[j].pageStructureSizes.script;
+                diff.push({
+                    aWprArchiveId: a[i].wprArchiveId,
+                    aWprArchiveSize: aSize,
+                    bWprArchiveId: b[j].wprArchiveId,
+                    bWprArchiveSize: bSize,
+                    diff: bSize - aSize,
                 });
             });
         });

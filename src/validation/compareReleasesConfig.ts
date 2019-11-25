@@ -18,7 +18,9 @@ const schema = joi.object().required().keys({
             rate: joi.number().integer().min(0),
         }),
         networkThrottling: joi.string().valid(...Object.keys(NETWORK_PRESETS)),
-        selectWprMethod: joi.string().valid(...['bestPairsQuantiles', 'bestPairsCloser']).default('bestPairsQuantiles'),
+        selectWprMethod: joi.string()
+            .valid(...['bestPairsQuantiles', 'bestPairsCloser', 'bestPairsCloserHtmlCloser', 'bestPairsCloserScriptCloser'])
+            .default('bestPairsQuantiles'),
         singleProcess: joi.boolean().default(false),
         imagesEnabled: joi.boolean().default(true),
         javascriptEnabled: joi.boolean().default(true),

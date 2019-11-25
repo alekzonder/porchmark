@@ -52,8 +52,34 @@ export const writeFile = (filepath: string, data: String | Buffer): Promise<void
     });
 };
 
+export const readFile = (filepath: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        fs.readFile(filepath, (err, data) => {
+            if (err) {
+                return reject(err);
+            }
+
+            resolve(data.toString());
+        });
+    });
+};
+
 export const writeJson = (filepath: string, data: any) => {
     return writeFile(filepath, JSON.stringify(data, null, 2));
+};
+
+export const readJson = async (filepath: string) => {
+    const data = await readFile(filepath);
+
+    let json: any = null;
+
+    try {
+        json = JSON.parse(data);
+    } catch (e) {
+        throw new Error(`invalid json in file: ${filepath}`);
+    }
+
+    return json;
 };
 
 export const createWriteStream = fs.createWriteStream;
