@@ -132,6 +132,7 @@ export class Api {
                 httpPort,
                 httpsPort,
             },
+            ignoreHTTPSErrors: true,
         };
 
         // start puppeteer
