@@ -126,6 +126,7 @@ export class Api {
         config: IRecordWprConfig,
     ): Promise<boolean> {
         const {id, site, browserLaunchOptions, pageProfile} = config;
+        this._logger.info(`recordWpr started: ${site.name} id=${id}`);
         await this.saveConfig(workDir, `${site.name}-${id}.record-wpr`, config);
 
         const [httpPort, httpsPort] = await this._findTwoFreePorts();
@@ -146,7 +147,6 @@ export class Api {
                 httpsPort,
             },
             ignoreHTTPSErrors: true,
-            // acceptInsecureCerts: true,
         };
 
         // start puppeteer
@@ -170,25 +170,96 @@ export class Api {
             // reload
             // await page.reload();
 
-            const pageSizes = await page.getPageStructureSizes();
-
-            await fs.writeJson(this._getPageStructureSizesFilepath(workDir, site, id), pageSizes);
-
             // save screenshot
             await page.screenshot(`-${id}`);
             // close page
             await page.close();
 
-            this._logger.info("record wpr complete");
-        } catch (e) {
+            this._logger.info(`recordWpr complete: ${site.name} id=${id}`);
+        } catch (error) {
             hasError = true;
             // TODO throw error
-            this._logger.error("record wpr error", e);
+            this._logger.error(`recordWpr error: ${site.name} id=${id}`, error);
         } finally {
             await bro.close();
             // stop wpr record
             await wprRecordProcess.stop();
             await wprRecordProcess.wait();
+        }
+
+        if (hasError) {
+            return hasError;
+        }
+
+        hasError = await this.getPageStructureSizes(workDir, config);
+
+        return hasError;
+    }
+
+    public async getPageStructureSizes(
+        workDir: string,
+        config: IRecordWprConfig,
+    ) {
+        const {id, site, browserLaunchOptions, pageProfile} = config;
+        this._logger.info(`getPageStructureSizes started: ${site.name} id=${id}`);
+
+        const [httpPort, httpsPort] = await this._findTwoFreePorts();
+
+        // start wpr replay
+        const wprReplayProcess = await this._createWprReplayProcess({
+            httpPort,
+            httpsPort,
+            wprArchiveFilepath: this._getWprArchiveFilepath(workDir, site, id),
+            stdoutFilepath: this._getWprReplayStdoutFilepath(workDir, site, id, -1),
+            stderrFilepath: this._getWprReplayStderrFilepath(workDir, site, id, -1),
+        });
+
+        const browserLaunchWithWprProfile = {
+            ...browserLaunchOptions,
+            wpr: {
+                httpPort,
+                httpsPort,
+            },
+            ignoreHTTPSErrors: true,
+        };
+
+        // start puppeteer
+        const bro = await this._puppeteer.launch(browserLaunchWithWprProfile);
+
+        let hasError = false;
+
+        try {
+            await wprReplayProcess.start();
+
+            const customPageProfile: IPageProfile = {
+                ...pageProfile,
+                javascriptEnabled: false,
+            };
+
+            const page = bro.createDesktopOrMobilePage(site.mobile, workDir, customPageProfile, site);
+
+            await page.open();
+
+            // reload
+            // await page.reload();
+
+            const pageSizes = await page.getPageStructureSizes();
+            await fs.writeJson(this._getPageStructureSizesFilepath(workDir, site, id), pageSizes);
+
+            // save screenshot
+            await page.screenshot(`-no-js-${id}`);
+            // close page
+            await page.close();
+
+            this._logger.info(`getPageStructureSizes complete: ${site.name} id=${id}`);
+        } catch (error) {
+            hasError = true;
+            // TODO throw error
+            this._logger.error("getPageStructureSizes error", error);
+        } finally {
+            await bro.close();
+            await wprReplayProcess.stop();
+            await wprReplayProcess.wait();
         }
 
         return hasError;
