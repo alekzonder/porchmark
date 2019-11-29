@@ -394,6 +394,7 @@ export class CommandApi {
 
                 const report = await dataProcessor.calcReport(config.sites);
                 await api.saveTotalReport(config.workDir, report);
+                await api.saveHumanTotalReport(config.workDir, report);
             }
         }
     }

@@ -419,25 +419,12 @@ export class Api {
                 hooks,
             });
 
-            // TODO move upper
-            // if (options.singleProcess && !silent && !viewInterval) {
-            //     viewInterval = setInterval(() => {
-            //         view.renderTable(dataProcessor.calculateResults());
-            //     }, RENDER_TABLE_INTERVAL);
-            // }
-
             if (options.singleProcess) {
                 await eventIterator;
             }
 
             eventIterators.push(eventIterator);
         }
-
-        // if (!options.singleProcess && !silent && !viewInterval) {
-        //     viewInterval = setInterval(() => {
-        //         view.renderTable(dataProcessor.calculateResults());
-        //     }, RENDER_TABLE_INTERVAL);
-        // }
 
         await Promise.all(eventIterators);
         await Promise.all(browsers.map(b => b.close()));
@@ -448,12 +435,11 @@ export class Api {
             clearInterval(viewInterval);
         }
 
-        // view.softShutdown();
-        // await this._saveColorResultTable(workDir, view.getTableText(), id);
-
         const report = await dataProcessor.calcReport(sites);
 
+        // TODO make save method
         await fs.writeJson(this._getReportFilepath(workDir, String(id)), report);
+        await this._saveHumanReport(workDir, report, String(id));
 
         this._logger.info("compare complete");
     }
@@ -1099,6 +1085,16 @@ export class Api {
         await fs.writeJson(filepath, report);
     }
 
+    public async saveHumanTotalReport(workDir: string, report: IReport) {
+        return this._saveHumanReport(workDir, report, 'total');
+    }
+
+    protected async _saveHumanReport(workDir: string, report: IReport, id: string) {
+        const filepath = this._getHumanReportFilepath(workDir, id);
+        const table = cTable.getTable(report.headers, report.data);
+        await fs.writeFile(filepath, table);
+    }
+
     protected async _createCompareEventIterator(
         workDir: string,
         options: ICompareEventIteratorOptions,
@@ -1352,6 +1348,10 @@ export class Api {
 
     protected _getReportFilepath(workDir: string, id: string) {
         return path.resolve(workDir, `report-${id}.json`);
+    }
+
+    protected _getHumanReportFilepath(workDir: string, id: string) {
+        return path.resolve(workDir, `human-report-${id}.txt`);
     }
 
     protected _sleep(ms: number) {
