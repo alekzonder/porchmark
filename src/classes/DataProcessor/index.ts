@@ -2,7 +2,7 @@ import {Logger} from "@/lib/logger";
 import jstat from 'jstat';
 import {ISite, SiteName} from "@/types";
 
-export type IAggregation = {
+export type IMetricAggregation = {
     name: 'q50' | 'q80' | 'q95' | 'stdev' | 'count',
     includeMetrics?: string[];
     excludeMetrics?: string[];
@@ -15,7 +15,7 @@ export type IMetric = {
 
 export interface IDataProcessorConfig {
     metrics: IMetric[];
-    aggregations: IAggregation[];
+    metricAggregations: IMetricAggregation[];
 }
 
 export interface IOriginalMetrics {
@@ -72,7 +72,7 @@ export default class DataProcessor {
             const metricName = metric.name;
             const metricTitle = metric.title ? metric.title : metric.name;
 
-            for (const aggregation of this._config.aggregations) {
+            for (const aggregation of this._config.metricAggregations) {
                 const rawRow: (number | string)[] = [metricTitle, aggregation.name];
                 const row: string[] = [metricTitle, aggregation.name];
 
@@ -140,7 +140,7 @@ export default class DataProcessor {
         return this._metrics[siteName][metricName];
     }
 
-    protected _calcAggregation(aggregation: IAggregation, metricName: string, metrics: number[]) {
+    protected _calcAggregation(aggregation: IMetricAggregation, metricName: string, metrics: number[]) {
         this._logger.debug(`metric=${metricName}: calc aggregation=${aggregation}`);
 
         switch (aggregation.name) {

@@ -22,7 +22,7 @@ import findFreePort from "@/modules/find-free-port";
 import * as fs from "@/modules/fs";
 import {IWprConfig, WprRecord, WprReplay} from "@/classes/Wpr";
 import {BrowserApi, IBrowserLaunchOptions, IPageProfile, PuppeteerApi} from "@/classes/Puppeteer";
-import DataProcessor, {IOriginalMetrics, IReport} from '@/classes/DataProcessor';
+import DataProcessor, {IDataProcessorConfig, IOriginalMetrics, IReport} from '@/classes/DataProcessor';
 // import {DataProcessor} from "@/lib/dataProcessor";
 import {Logger} from "@/lib/logger";
 
@@ -360,7 +360,7 @@ export class Api {
 
         const dataProcessor = options.dataProcessor
             ? options.dataProcessor
-            : this.createDataProcessor();
+            : this.createDataProcessor(this.createDefaultDataProcessorConfig());
 
         let viewInterval;
 
@@ -748,8 +748,12 @@ export class Api {
         return config;
     }
 
-    public createDataProcessor() {
-        return new DataProcessor(this._logger, {
+    public createDataProcessor(config: IDataProcessorConfig) {
+        return new DataProcessor(this._logger, config);
+    }
+
+    public createDefaultDataProcessorConfig(): IDataProcessorConfig  {
+        return {
             metrics: [
                 {name: 'requestStart'},
                 {name: 'responseStart', title: 'TTFB'},
@@ -764,15 +768,13 @@ export class Api {
                 {name: 'encodedBodySize'},
                 {name: 'decodedBodySize'},
             ],
-            aggregations: [
+            metricAggregations: [
                 {name: 'count', includeMetrics: ['requestStart']},
                 {name: 'q50'},
-                // {name: 'q80'},
-                // {name: 'q95'},
-                // {name: 'stdev'},
+                {name: 'q80'},
+                {name: 'q95'},
             ],
-        });
-        // return new DataProcessor(sites.map(s => s.url), {} as any);
+        };
     }
 
     public async getWprSizes(workDir: string, sites: ISite[]): Promise<IWprSize[]> {

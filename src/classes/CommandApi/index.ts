@@ -332,7 +332,17 @@ export class CommandApi {
 
                 const view = new View(logger, {});
 
-                const dataProcessor = api.createDataProcessor();
+                const dataProcessorConfig = api.createDefaultDataProcessorConfig();
+
+                if (rawConfig.metrics) {
+                    dataProcessorConfig.metrics = rawConfig.metrics;
+                }
+
+                if (rawConfig.metricAggregations) {
+                    dataProcessorConfig.metricAggregations = rawConfig.metricAggregations;
+                }
+
+                const dataProcessor = api.createDataProcessor(dataProcessorConfig);
 
                 const setTableDataInterval = setInterval(async () => {
                     const report = await dataProcessor.calcReport(config.sites);

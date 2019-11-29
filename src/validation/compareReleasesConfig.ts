@@ -26,6 +26,19 @@ const schema = joi.object().required().keys({
         javascriptEnabled: joi.boolean().default(true),
         cssFilesEnabled: joi.boolean().default(true),
     }),
+    metrics: joi.array().min(1).items(
+        joi.object().keys({
+            name: joi.string().required(),
+            title: joi.string(),
+        })
+    ),
+    metricAggregations: joi.array().min(1).items(
+        joi.object().keys({
+            name: joi.string().required().valid(['q50', 'q80', 'q95', 'count', 'stdev']),
+            includeMetrics: joi.array().items(joi.string()),
+            excludeMetrics: joi.array().items(joi.string())
+        })
+    ),
     hosts: joi.array().required().items(joi.object().required().keys({
         name: joi.string().required(),
         host: joi.string().required().uri({scheme: ['http', 'https']})
