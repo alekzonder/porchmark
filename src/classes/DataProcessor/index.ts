@@ -8,8 +8,13 @@ export type IAggregation = {
     excludeMetrics?: string[];
 };
 
+export type IMetric = {
+    name: string;
+    title?: string;
+};
+
 export interface IDataProcessorConfig {
-    metrics: string[];
+    metrics: IMetric[];
     aggregations: IAggregation[];
 }
 
@@ -63,10 +68,13 @@ export default class DataProcessor {
             rawData: [],
         };
 
-        for (const metricName of this._config.metrics) {
+        for (const metric of this._config.metrics) {
+            const metricName = metric.name;
+            const metricTitle = metric.title ? metric.title : metric.name;
+
             for (const aggregation of this._config.aggregations) {
-                const rawRow: (number | string)[] = [metricName, aggregation.name];
-                const row: string[] = [metricName, aggregation.name];
+                const rawRow: (number | string)[] = [metricTitle, aggregation.name];
+                const row: string[] = [metricTitle, aggregation.name];
 
                 if (aggregation.includeMetrics && !aggregation.includeMetrics.includes(metricName)) {
                     this._logger.info(`includeMetrics: skip aggregation=${aggregation.name} for metric=${metricName}`);
@@ -80,15 +88,13 @@ export default class DataProcessor {
 
                 const allSitesMetrics = [];
 
-                // let prev: number = NaN;
-
                 const values = [];
 
                 for (const siteName of siteNames) {
-                    const metric = this._getSiteMetric(siteName, metricName);
-                    allSitesMetrics.push(metric);
+                    const metricValues = this._getSiteMetric(siteName, metricName);
+                    allSitesMetrics.push(metricValues);
 
-                    const aggregated = this._calcAggregation(aggregation, metricName, metric);
+                    const aggregated = this._calcAggregation(aggregation, metricName, metricValues);
                     rawRow.push(aggregated);
 
                     const fixedNumber = this._toFixedNumber(aggregated);
