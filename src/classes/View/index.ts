@@ -9,6 +9,7 @@ interface IViewConfig {
 
 }
 
+const METRIC_NAME_LENGTH = 15;
 const RENDER_INTERVAL = 200;
 
 export default class View {
@@ -52,8 +53,8 @@ export default class View {
             width: '60%',
             height: '100%',
             border: {type: "line", fg: "cyan"},
-            columnSpacing: 10, //in chars
-            columnWidth: [15, 10, 12, 12, 12] /*in chars*/
+            columnSpacing: 5, //in chars
+            columnWidth: [METRIC_NAME_LENGTH, 10, 12, 12, 12, 12, 12] /*in chars*/
         });
 
         this.table.focus();
@@ -66,8 +67,18 @@ export default class View {
         });
     }
 
-    public async setTableData(report: IReport) {
-        this.table.setData(report);
+    public async setTableData(rawReport: IReport) {
+        const data = rawReport.data.map(row => {
+            return [
+                row[0].substring(0, METRIC_NAME_LENGTH),
+                ...row.slice(1),
+            ];
+        });
+
+        this.table.setData({
+            headers: rawReport.headers,
+            data,
+        });
     }
 
     public async start() {

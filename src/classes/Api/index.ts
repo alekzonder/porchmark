@@ -9,8 +9,9 @@ import cTable = require("console.table");
 
 import {
     OriginalMetrics,
-    watchingMetrics,
-    watchingMetricsRealNames,
+    // TODO remove
+    // watchingMetrics,
+    // watchingMetricsRealNames,
     IComparation,
     ICompareReleasesConfig,
     IRawCompareReleasesConfig,
@@ -21,8 +22,8 @@ import findFreePort from "@/modules/find-free-port";
 import * as fs from "@/modules/fs";
 import {IWprConfig, WprRecord, WprReplay} from "@/classes/Wpr";
 import {BrowserApi, IBrowserLaunchOptions, IPageProfile, PuppeteerApi} from "@/classes/Puppeteer";
-import * as view from '@/lib/view';
-import {DataProcessor} from "@/lib/dataProcessor";
+import DataProcessor, {IOriginalMetrics, IReport} from '@/classes/DataProcessor';
+// import {DataProcessor} from "@/lib/dataProcessor";
 import {Logger} from "@/lib/logger";
 
 import eventIterator from "./eventIterator";
@@ -39,7 +40,7 @@ const FIND_PORT_STEP = 2;
 
 const SLEEP_BEFORE_FIND_PORT = 100;
 const SLEEP_BEFORE_NEXT_PAGE_OPEN = 100;
-const RENDER_TABLE_INTERVAL = 200;
+// const RENDER_TABLE_INTERVAL = 200; TODO remove
 
 export class Api {
     protected _logger: Logger;
@@ -348,13 +349,13 @@ export class Api {
             iterations,
             warmIterations,
             useWpr,
-            silent
+            // silent TODO remove?
         } = options;
 
         await this.saveConfig(
             workDir,
             `compare-metrics-${id}-${sites.map(s => s.wprArchiveId).join("-")}`,
-            omit(options, ["dataProcessor"])
+            omit(options, ["dataProcessor", "view"]) // TODO fix this shhh
         );
         const wprReplayProcesses: WprReplay[] = [];
         const browsers: BrowserApi[] = [];
@@ -362,7 +363,7 @@ export class Api {
 
         const dataProcessor = options.dataProcessor
             ? options.dataProcessor
-            : this.createDataProcessor(options.sites);
+            : this.createDataProcessor();
 
         let viewInterval;
 
@@ -409,11 +410,11 @@ export class Api {
             });
 
             // TODO move upper
-            if (options.singleProcess && !silent && !viewInterval) {
-                viewInterval = setInterval(() => {
-                    view.renderTable(dataProcessor.calculateResults());
-                }, RENDER_TABLE_INTERVAL);
-            }
+            // if (options.singleProcess && !silent && !viewInterval) {
+            //     viewInterval = setInterval(() => {
+            //         view.renderTable(dataProcessor.calculateResults());
+            //     }, RENDER_TABLE_INTERVAL);
+            // }
 
             if (options.singleProcess) {
                 await eventIterator;
@@ -422,11 +423,11 @@ export class Api {
             eventIterators.push(eventIterator);
         }
 
-        if (!options.singleProcess && !silent && !viewInterval) {
-            viewInterval = setInterval(() => {
-                view.renderTable(dataProcessor.calculateResults());
-            }, RENDER_TABLE_INTERVAL);
-        }
+        // if (!options.singleProcess && !silent && !viewInterval) {
+        //     viewInterval = setInterval(() => {
+        //         view.renderTable(dataProcessor.calculateResults());
+        //     }, RENDER_TABLE_INTERVAL);
+        // }
 
         await Promise.all(eventIterators);
         await Promise.all(browsers.map(b => b.close()));
@@ -437,9 +438,12 @@ export class Api {
             clearInterval(viewInterval);
         }
 
-        view.softShutdown();
+        // view.softShutdown();
+        // await this._saveColorResultTable(workDir, view.getTableText(), id);
 
-        await this._saveColorResultTable(workDir, view.getTableText(), id);
+        const report = await dataProcessor.calcReport(sites);
+
+        await fs.writeJson(this._getReportFilepath(workDir, String(id)), report);
 
         this._logger.info("compare complete");
     }
@@ -747,9 +751,31 @@ export class Api {
         return config;
     }
 
-    public createDataProcessor(sites: ISite[]) {
-        // TODO make second argument options optional or refactor
-        return new DataProcessor(sites.map(s => s.url), {} as any);
+    public createDataProcessor() {
+        return new DataProcessor(this._logger, {
+            metrics: [
+                'requestStart',
+                'responseStart',
+                'responseEnd',
+                'first-paint',
+                'first-contentful-paint',
+                'domContentLoadedEventEnd',
+                'loadEventEnd',
+                'domInteractive',
+                'domComplete',
+                'transferSize',
+                'encodedBodySize',
+                'decodedBodySize',
+            ],
+            aggregations: [
+                {name: 'count', includeMetrics: ['requestStart']},
+                {name: 'q50'},
+                // {name: 'q80'},
+                // {name: 'q95'},
+                // {name: 'stdev'},
+            ],
+        });
+        // return new DataProcessor(sites.map(s => s.url), {} as any);
     }
 
     public async getWprSizes(workDir: string, sites: ISite[]): Promise<IWprSize[]> {
@@ -1043,11 +1069,16 @@ export class Api {
         return sitesWithWprArchiveId;
     }
 
+    public async saveTotalReport(workDir: string, report: IReport) {
+        const filepath = this._getReportFilepath(workDir, 'total');
+        await fs.writeJson(filepath, report);
+    }
+
     protected async _createCompareEventIterator(
         workDir: string,
         options: ICompareEventIteratorOptions,
     ) {
-        const {id, dataProcessor, siteIndex, site, browser, pageProfile, iterations} = options;
+        const {id, dataProcessor, site, browser, pageProfile, iterations} = options;
 
         const metricNames = [
             "fetchStart",
@@ -1085,15 +1116,20 @@ export class Api {
             return filteredMetrics;
         }
 
-        function registerMetrics([originalMetrics, siteIndex]: [OriginalMetrics, number]): void {
-            const transformedMetrics: number[] = [];
+        // TODO remove
+        // function registerMetrics([originalMetrics, siteIndex]: [OriginalMetrics, number]): void {
+        //     const transformedMetrics: number[] = [];
+        //
+        //     for (let metricIndex = 0; metricIndex < watchingMetrics.length; metricIndex++) {
+        //         const metricName = watchingMetricsRealNames[metricIndex];
+        //         transformedMetrics[metricIndex] = originalMetrics[metricName];
+        //     }
+        //
+        //     dataProcessor.registerMetrics(siteIndex, transformedMetrics);
+        // }
 
-            for (let metricIndex = 0; metricIndex < watchingMetrics.length; metricIndex++) {
-                const metricName = watchingMetricsRealNames[metricIndex];
-                transformedMetrics[metricIndex] = originalMetrics[metricName];
-            }
-
-            dataProcessor.registerMetrics(siteIndex, transformedMetrics);
+        async function registerMetrics(metrics: IOriginalMetrics) {
+            await dataProcessor.registerMetrics(site.name, metrics);
         }
 
         const wprArchiveId = site.wprArchiveId;
@@ -1102,10 +1138,12 @@ export class Api {
         const entriesStream = fs.createWriteStream(this._getPerformanceEntriesFilepath(workDir, site, id, wprArchiveId));
 
         const writeMetrics = (iteration: number, metrics: OriginalMetrics) => {
+            const filteredMetrics = filterMetrics(metrics);
+
             const json = JSON.stringify({
                 iteration,
                 name: site.name,
-                ...filterMetrics(metrics),
+                ...filteredMetrics,
             });
             metricsStream.write(`${json}\n`);
         };
@@ -1144,7 +1182,7 @@ export class Api {
             await page.open();
             const metrics = await page.getMetrics();
             writeMetrics(i, metrics);
-            registerMetrics([metrics, siteIndex]);
+            registerMetrics(metrics);
             const entries = await page.getPerformanceEntries();
             writePerfomanceEntries(i, entries);
             await page.close();
@@ -1282,6 +1320,10 @@ export class Api {
 
     protected _getPageStructureSizesFilepath(workDir: string, site: ISite, wprArchiveId: number) {
         return path.resolve(workDir, `${site.name}-${wprArchiveId}.page-structure-sizes.json`);
+    }
+
+    protected _getReportFilepath(workDir: string, id: string) {
+        return path.resolve(workDir, `report-${id}.json`);
     }
 
     protected _sleep(ms: number) {

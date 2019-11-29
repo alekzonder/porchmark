@@ -40,19 +40,20 @@ export default class DataProcessor {
         this._metrics = {};
     }
 
-    public registerMetrics(siteName: SiteName, originalMetrics: IOriginalMetrics) {
+    public async registerMetrics(siteName: SiteName, originalMetrics: IOriginalMetrics) {
         for (const [metricName, metricValue] of Object.entries(originalMetrics)) {
             const metric = this._getSiteMetric(siteName, metricName);
             metric.push(metricValue);
         }
     }
 
-    public calcReport(sites: ISite[]) {
+    public async calcReport(sites: ISite[]) {
         const siteNames = sites.map(site => site.name);
         const headers = [
             'metric',
             'func',
             ...siteNames,
+            'diff',
             'p-value',
         ];
 
@@ -79,13 +80,26 @@ export default class DataProcessor {
 
                 const allSitesMetrics = [];
 
+                // let prev: number = NaN;
+
+                const values = [];
+
                 for (const siteName of siteNames) {
                     const metric = this._getSiteMetric(siteName, metricName);
                     allSitesMetrics.push(metric);
+
                     const aggregated = this._calcAggregation(aggregation, metricName, metric);
                     rawRow.push(aggregated);
-                    row.push(this._toFixedNumber(aggregated));
+
+                    const fixedNumber = this._toFixedNumber(aggregated);
+                    row.push(fixedNumber);
+
+                    values.push(aggregated);
                 }
+
+                // add diff
+                const diff = values[1] - values[0];
+                row.push(`${this._getSign(diff)}${this._toFixedNumber(diff)}`);
 
                 // calc p-value
                 const pval = jstat.anovaftest(...allSitesMetrics);
@@ -101,7 +115,11 @@ export default class DataProcessor {
     }
 
     protected _toFixedNumber(i: number): string {
-        return i.toFixed(2);
+        return typeof i === 'number' ? i.toFixed(2) : '-';
+    }
+
+    protected _getSign(i: number) {
+        return i > 0 ? '+' : '';
     }
 
     protected _getSiteMetric(siteName: string, metricName: string): number[] {

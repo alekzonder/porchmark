@@ -11,6 +11,7 @@ import {IBrowserLaunchOptions, IPageProfile, NETWORK_PRESET_TYPES} from "@/class
 import {Api} from "@/classes/Api";
 import compareReleasesConfigSchema from '@/validation/compareReleasesConfig';
 import {IWprPair} from "@/classes/Api/types";
+import View from "@/classes/View";
 
 export class CommandApi {
     protected _logger: Logger;
@@ -107,8 +108,11 @@ export class CommandApi {
 
         const {sites, iterations, useWpr, silent} = options;
 
+        const view = new View(this._logger, {});
+
         return this._api.compareMetrics(workDir, {
             id: 0,
+            view,
             sites: sites.map(site => ({...site, wprArchiveId: 0})),
             browserLaunchOptions,
             pageProfile,
@@ -153,8 +157,10 @@ export class CommandApi {
                 });
             }
             if (rawConfig.stages.compareMetrics) {
+                const view = new View(this._logger, {});
                 await api.compareMetrics(config.workDir, {
                     id: 0,
+                    view,
                     sites: config.sites.map(site => ({...site, wprArchiveId: 0})),
                     browserLaunchOptions,
                     pageProfile,
@@ -322,23 +328,46 @@ export class CommandApi {
             };
 
             if (rawConfig.stages.compareMetrics) {
-                const dataProcessor = api.createDataProcessor(config.sites);
                 let id = 0;
-                for (const sites of bestSiteWithWprPairs) {
-                    await api.compareMetrics(config.workDir, {
-                        id,
-                        dataProcessor,
-                        sites,
-                        browserLaunchOptions,
-                        pageProfile: openPagePageProfile,
-                        iterations: compareReleasesConfig.options.iterations,
-                        warmIterations: rawConfig.options.warmIterations,
-                        useWpr: config.useWpr,
-                        silent: config.silent,
-                        singleProcess: rawConfig.options.singleProcess,
-                    });
-                    id++;
+
+                const view = new View(logger, {});
+
+                const dataProcessor = api.createDataProcessor();
+
+                const setTableDataInterval = setInterval(async () => {
+                    const report = await dataProcessor.calcReport(config.sites);
+                    await view.setTableData(report);
+                }, 200); // TODO
+
+                await view.init();
+                await view.start();
+
+                try {
+                    for (const sites of bestSiteWithWprPairs) {
+                        await api.compareMetrics(config.workDir, {
+                            id,
+                            view,
+                            dataProcessor,
+                            sites,
+                            browserLaunchOptions,
+                            pageProfile: openPagePageProfile,
+                            iterations: compareReleasesConfig.options.iterations,
+                            warmIterations: rawConfig.options.warmIterations,
+                            useWpr: config.useWpr,
+                            silent: config.silent,
+                            singleProcess: rawConfig.options.singleProcess,
+                        });
+                        id++;
+                    }
+                } finally {
+                    clearInterval(setTableDataInterval);
+                    await view.setTableData(await dataProcessor.calcReport(config.sites));
+                    await view.screen.render();
+                    await view.stop();
                 }
+
+                const report = await dataProcessor.calcReport(config.sites);
+                await api.saveTotalReport(config.workDir, report);
             }
         }
     }

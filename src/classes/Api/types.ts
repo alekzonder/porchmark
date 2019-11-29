@@ -1,6 +1,8 @@
 import {ISite, ISiteWithWprArchiveId} from "@/types";
 import {BrowserApi, IBrowserLaunchOptions, IPageProfile, IPageStructureSizes} from "@/classes/Puppeteer";
-import {DataProcessor} from "@/lib/dataProcessor";
+// import {DataProcessor} from "@/lib/dataProcessor";
+import DataProcessor from "@/classes/DataProcessor";
+import View from "@/classes/View";
 
 export interface IRecordWprConfig {
     id: number;
@@ -30,6 +32,7 @@ export interface ICompareEventIteratorOptions {
 
 export interface ICompareMetricsOptions {
     id: number;
+    view: View;
     dataProcessor?: DataProcessor;
     sites: ISiteWithWprArchiveId[];
     browserLaunchOptions: IBrowserLaunchOptions;

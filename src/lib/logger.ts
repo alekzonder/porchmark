@@ -30,7 +30,7 @@ export const createFileLogger = (logfilepath: string) => {
         ],
         dateformat: "HH:MM:ss.L",
         transport: function (data) {
-            process.stderr.write(data.output + '\n');
+            // process.stderr.write(data.output + '\n');
             fs.appendFile(logfilepath, data.rawoutput + '\n', (err) => {
                 if (err) throw err;
             });
