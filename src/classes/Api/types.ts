@@ -9,12 +9,16 @@ export interface IRecordWprHooks {
     onVerifyWpr?: (logger: Logger, page: PageApi) => Promise<void>;
 }
 
+export interface ICompareMetricsHooks {
+    onCollectMetrics?: (logger: Logger, page: PageApi) => Promise<{}>;
+}
+
 export interface IRecordWprConfig {
     id: number;
     site: ISite,
     browserLaunchOptions: IBrowserLaunchOptions,
     pageProfile: IPageProfile,
-    hooks?: IRecordWprHooks;
+    hooks?: IRecordWprHooks & ICompareMetricsHooks;
 }
 
 export interface IWprProcessOptions {
@@ -34,6 +38,7 @@ export interface ICompareEventIteratorOptions {
     pageProfile: IPageProfile,
     iterations: number;
     warmIterations: number;
+    hooks: ICompareMetricsHooks;
 }
 
 export interface ICompareMetricsOptions {
@@ -49,6 +54,7 @@ export interface ICompareMetricsOptions {
     silent: boolean;
     // TODO multi workers
     singleProcess: boolean;
+    hooks: ICompareMetricsHooks;
 }
 
 export interface IWprSize {

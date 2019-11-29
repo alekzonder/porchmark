@@ -358,6 +358,7 @@ export class Api {
             warmIterations,
             useWpr,
             // silent TODO remove?
+            hooks,
         } = options;
 
         await this.saveConfig(
@@ -415,6 +416,7 @@ export class Api {
                 pageProfile,
                 iterations,
                 warmIterations,
+                hooks,
             });
 
             // TODO move upper
@@ -1101,7 +1103,7 @@ export class Api {
         workDir: string,
         options: ICompareEventIteratorOptions,
     ) {
-        const {id, dataProcessor, site, browser, pageProfile, iterations} = options;
+        const {id, dataProcessor, site, browser, pageProfile, iterations, hooks} = options;
 
         // const metricNames = [
         //     "fetchStart",
@@ -1190,7 +1192,19 @@ export class Api {
         await eventIterator(iterations, async (i: number) => {
             const page = createPage();
             await page.open();
-            const metrics = await page.getMetrics();
+            const pageMetrics = await page.getMetrics();
+
+            let customMetrics = {};
+
+            if (hooks && hooks.onCollectMetrics) {
+                customMetrics = await hooks.onCollectMetrics(this._logger, page);
+            }
+
+            const metrics = {
+                ...pageMetrics,
+                ...customMetrics,
+            };
+
             writeMetrics(i, metrics);
             registerMetrics(metrics);
             const entries = await page.getPerformanceEntries();

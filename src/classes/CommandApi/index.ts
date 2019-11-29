@@ -10,7 +10,7 @@ import {IBrowserLaunchOptions, IPageProfile, NETWORK_PRESET_TYPES} from "@/class
 
 import {Api} from "@/classes/Api";
 import compareReleasesConfigSchema from '@/validation/compareReleasesConfig';
-import {IRecordWprHooks, IWprPair} from "@/classes/Api/types";
+import {ICompareMetricsHooks, IRecordWprHooks, IWprPair} from "@/classes/Api/types";
 import View from "@/classes/View";
 
 export class CommandApi {
@@ -121,6 +121,7 @@ export class CommandApi {
             useWpr,
             silent,
             singleProcess: false,
+            hooks: {},
         });
     }
 
@@ -171,6 +172,7 @@ export class CommandApi {
                     singleProcess: typeof rawConfig.options.singleProcess !== 'undefined'
                         ? rawConfig.options.singleProcess
                         : false,
+                    hooks: {},
                 });
             }
             this._logger.info("compare-releases complete");
@@ -359,6 +361,12 @@ export class CommandApi {
                 await view.init();
                 await view.start();
 
+                const hooks: ICompareMetricsHooks = {};
+
+                if (rawConfig.hooks && rawConfig.hooks.onCollectMetrics) {
+                    hooks.onCollectMetrics = rawConfig.hooks.onCollectMetrics;
+                }
+
                 try {
                     for (const sites of bestSiteWithWprPairs) {
                         await api.compareMetrics(config.workDir, {
@@ -373,6 +381,7 @@ export class CommandApi {
                             useWpr: config.useWpr,
                             silent: config.silent,
                             singleProcess: rawConfig.options.singleProcess,
+                            hooks,
                         });
                         id++;
                     }
