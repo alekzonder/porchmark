@@ -160,16 +160,13 @@ export class Api {
 
             const page = bro.createDesktopOrMobilePage(site.mobile, workDir, pageProfile, site);
 
-            // try {
-            // load page
             await page.open();
-            // } catch (e) {
-            //     this._logger.error("retry after page open error", e);
-            //     await page.open();
-            // }
 
             // reload
             // await page.reload();
+
+            const pageSizesAfterLoaded = await page.getPageStructureSizes();
+            await fs.writeJson(this._getPageStructureSizesAfterLoadedFilepath(workDir, site, id), pageSizesAfterLoaded);
 
             // save screenshot
             await page.screenshot(`-${id}`);
@@ -1320,6 +1317,10 @@ export class Api {
 
     protected _getPageStructureSizesFilepath(workDir: string, site: ISite, wprArchiveId: number) {
         return path.resolve(workDir, `${site.name}-${wprArchiveId}.page-structure-sizes.json`);
+    }
+
+    protected _getPageStructureSizesAfterLoadedFilepath(workDir: string, site: ISite, wprArchiveId: number) {
+        return path.resolve(workDir, `${site.name}-${wprArchiveId}.page-structure-sizes-after-loaded.json`);
     }
 
     protected _getReportFilepath(workDir: string, id: string) {
