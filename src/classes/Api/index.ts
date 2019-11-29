@@ -210,7 +210,20 @@ export class Api {
             return hasError;
         }
 
-        hasError = await this.getPageStructureSizes(workDir, config);
+        hasError = await this.writePageStructureSizes(workDir, config);
+
+        return hasError;
+    }
+
+    public async writePageStructureSizes(
+        workDir: string,
+        config: IRecordWprConfig,
+    ) {
+        const {hasError, pageSizes} = await this.getPageStructureSizes(workDir, config, {
+            takeScreenshot: true,
+            useWpr: true,
+        });
+        await fs.writeJson(this._getPageStructureSizesFilepath(workDir, config.site, config.id), pageSizes);
 
         return hasError;
     }
@@ -218,29 +231,38 @@ export class Api {
     public async getPageStructureSizes(
         workDir: string,
         config: IRecordWprConfig,
+        options: {
+            takeScreenshot: boolean;
+            useWpr: boolean; // TODO refactor (wpr without wpr WTF)
+        },
     ) {
         const {id, site, browserLaunchOptions, pageProfile, hooks} = config;
         this._logger.info(`getPageStructureSizes started: ${site.name} id=${id}`);
 
-        const [httpPort, httpsPort] = await this._findTwoFreePorts();
-
-        // start wpr replay
-        const wprReplayProcess = await this._createWprReplayProcess({
-            httpPort,
-            httpsPort,
-            wprArchiveFilepath: this._getWprArchiveFilepath(workDir, site, id),
-            stdoutFilepath: this._getWprReplayStdoutFilepath(workDir, site, id, -1),
-            stderrFilepath: this._getWprReplayStderrFilepath(workDir, site, id, -1),
-        });
-
         const browserLaunchWithWprProfile = {
             ...browserLaunchOptions,
-            wpr: {
-                httpPort,
-                httpsPort,
-            },
             ignoreHTTPSErrors: true,
         };
+
+        let wprReplayProcess: WprReplay | null = null;
+
+        if (options.useWpr) {
+            const [httpPort, httpsPort] = await this._findTwoFreePorts();
+
+            // start wpr replay
+            wprReplayProcess = await this._createWprReplayProcess({
+                httpPort,
+                httpsPort,
+                wprArchiveFilepath: this._getWprArchiveFilepath(workDir, site, id),
+                stdoutFilepath: this._getWprReplayStdoutFilepath(workDir, site, id, -1),
+                stderrFilepath: this._getWprReplayStderrFilepath(workDir, site, id, -1),
+            });
+
+            browserLaunchOptions.wpr = {
+                httpPort,
+                httpsPort,
+            };
+        }
 
         // start puppeteer
         const bro = await this._puppeteer.launch(browserLaunchWithWprProfile);
@@ -248,7 +270,9 @@ export class Api {
         let hasError = false;
 
         try {
-            await wprReplayProcess.start();
+            if (wprReplayProcess) {
+                await wprReplayProcess.start();
+            }
 
             const customPageProfile: IPageProfile = {
                 ...pageProfile,
@@ -273,25 +297,31 @@ export class Api {
             }
 
             const pageSizes = await page.getPageStructureSizes(pageSizesHooks);
-            await fs.writeJson(this._getPageStructureSizesFilepath(workDir, site, id), pageSizes);
 
-            // save screenshot
-            await page.screenshot(`-no-js-${id}`);
+            if (options.takeScreenshot) {
+                // save screenshot
+                await page.screenshot(`-no-js-${id}`);
+            }
+
             // close page
             await page.close();
 
             this._logger.info(`getPageStructureSizes complete: ${site.name} id=${id}`);
+
+            return {hasError, pageSizes};
         } catch (error) {
             hasError = true;
             // TODO throw error
             this._logger.error("getPageStructureSizes error", error);
         } finally {
             await bro.close();
-            await wprReplayProcess.stop();
-            await wprReplayProcess.wait();
+            if (wprReplayProcess) {
+                await wprReplayProcess.stop();
+                await wprReplayProcess.wait();
+            }
         }
 
-        return hasError;
+        return {hasError};
     }
 
     public async recordOneWprsForManySites(

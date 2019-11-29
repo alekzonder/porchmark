@@ -10,7 +10,7 @@ import {IBrowserLaunchOptions, IPageProfile, IPageStructureSizesHooks, NETWORK_P
 
 import {Api} from "@/classes/Api";
 import compareReleasesConfigSchema from '@/validation/compareReleasesConfig';
-import {ICompareMetricsHooks, IRecordWprHooks, IWprPair} from "@/classes/Api/types";
+import {ICompareMetricsHooks, IRecordWprConfig, IRecordWprHooks, IWprPair} from "@/classes/Api/types";
 import View from "@/classes/View";
 
 export class CommandApi {
@@ -492,5 +492,60 @@ export class CommandApi {
     ) {
         await this._api.createWorkDir(workDir);
         return this._api.startBrowserWithWpr(workDir, wprArchiveFilepath);
+    }
+
+    public async getPageStructureSizes(
+        workDir: string,
+        rawConfigNotValidated: IRawCompareReleasesConfig,
+        url: string,
+    ) {
+        const api = new Api(this._logger);
+        const rawConfig = await this._api.validate<IRawCompareReleasesConfig>(
+            rawConfigNotValidated,
+            compareReleasesConfigSchema
+        );
+
+        const hooks: IRecordWprHooks & IPageStructureSizesHooks = {};
+
+        if (rawConfig.hooks) {
+            if (rawConfig.hooks.onVerifyWpr) {
+                hooks.onVerifyWpr = rawConfig.hooks.onVerifyWpr;
+            }
+
+            if (rawConfig.hooks.onPageStructureSizesNode) {
+                hooks.onPageStructureSizesNode = rawConfig.hooks.onPageStructureSizesNode;
+            }
+
+            if (rawConfig.hooks.onPageStructureSizesComplete) {
+                hooks.onPageStructureSizesComplete = rawConfig.hooks.onPageStructureSizesComplete;
+            }
+        }
+
+        const browserLaunchOptions: IBrowserLaunchOptions = {
+            headless: true,
+            ignoreHTTPSErrors: true,
+            wpr: null,
+            imagesEnabled: true,
+        };
+
+        const pageProfile: IPageProfile = {
+            ...api.getBasePageProfile(),
+        };
+
+        const config: IRecordWprConfig = {
+            id: 0,
+            site: {
+                name: 'test',
+                url,
+                mobile: rawConfig.options.mobile,
+            },
+            browserLaunchOptions,
+            pageProfile,
+            hooks,
+        };
+
+        const {pageSizes} = await api.getPageStructureSizes(workDir, config, {takeScreenshot: false, useWpr: false});
+
+        console.log(JSON.stringify(pageSizes, null, 2));
     }
 }

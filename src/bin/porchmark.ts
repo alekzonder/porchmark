@@ -91,6 +91,7 @@ program.command('compare-releases')
                 });
             } else {
                 logger.error(error);
+                process.exit(1);
             }
         }
     });
@@ -126,6 +127,7 @@ program.command('compare-lighthouse')
                 });
             } else {
                 logger.error(error);
+                process.exit(1);
             }
         }
     });
@@ -141,6 +143,42 @@ program.command('start-browser <wprFilepath>')
         const api = new CommandApi(logger);
 
         await api.startBrowserWithWpr(process.cwd(), wprFilepath);
+    });
+
+// page-struct
+program.command('page-struct <url>')
+    .description('get page structure: size of html, scripts, style and custom sizes')
+    .option('-c  --config [configfile.js]', 'path to config')
+    .action(async function (this: Command, url: string) {
+        setCurrentCommand(this);
+
+        if (!this.config) {
+            logger.fatal('set path to compare config, use --config option');
+            process.exit(1);
+        }
+
+        const rawConfigFilepath = this.config;
+
+        const configFilepath = path.isAbsolute(rawConfigFilepath) ? rawConfigFilepath : path.resolve(rawConfigFilepath);
+
+        // TODO check file exists and require errors
+        let config: IRawCompareReleasesConfig = require(configFilepath);
+
+        const api = new CommandApi(logger);
+
+        try {
+            await api.getPageStructureSizes(config.workDir, config, url);
+        } catch (error) {
+            if (error.isJoi) {
+                logger.fatal(`invalid config\n${JSON.stringify(config, null, 2)}`);
+                error.details.forEach((e: any) => {
+                    logger.fatal(`path=${e.path.join('.')}, ${e.message}`)
+                });
+            } else {
+                logger.error(error);
+                process.exit(1);
+            }
+        }
     });
 
 program.parse(process.argv);
