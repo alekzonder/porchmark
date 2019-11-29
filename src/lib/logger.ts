@@ -3,7 +3,7 @@ import * as fs from "fs";
 
 export type Logger = tracer.Tracer.Logger;
 
-export const createLogger = () => {
+export const createLogger = (level: string = 'debug') => {
     return tracer.colorConsole({
         format: [
             "{{timestamp}} <{{title}}> {{message}}", //  (in {{file}}:{{line}}) default format
@@ -12,6 +12,7 @@ export const createLogger = () => {
             },
         ],
         dateformat: "HH:MM:ss.L",
+        level,
         // inspectOpt: {
         //     showHidden: false,
         //     depth: 0,

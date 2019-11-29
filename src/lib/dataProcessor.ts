@@ -124,7 +124,7 @@ export class DataProcessor {
 
         this.calculateStats();
         this.calculateDiffs();
-        this.calculateHighlits();
+        this.calculateHighlights();
         this.calculatePaintedMetrics();
         this.calculatePaintedDiffs();
 
@@ -193,7 +193,7 @@ export class DataProcessor {
         }
     }
 
-    calculateHighlits() {
+    calculateHighlights() {
         for (let metricIndex = 0; metricIndex < watchingMetrics.length; metricIndex++) {
             for (let statIndex = 0; statIndex < calculatingStats.length; statIndex++) {
                 const statArray = this.getStatArray(statIndex, metricIndex);

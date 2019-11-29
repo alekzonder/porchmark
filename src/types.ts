@@ -38,8 +38,10 @@ export const watchingMetricsRealNames: WatchingMetricsRealNames[] = [
 
 export type OriginalMetrics = {[K in WatchingMetricsRealNames]: number};
 
+export type SiteName = string;
+
 export interface ISite {
-    name: string;
+    name: SiteName;
     url: string;
     mobile?: boolean;
 }
