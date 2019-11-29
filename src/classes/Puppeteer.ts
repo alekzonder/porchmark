@@ -1,5 +1,5 @@
 import * as path from "path";
-import puppeteer from "puppeteer";
+import puppeteer, {EvaluateFn, EvaluateFnReturnType, SerializableOrJSHandle} from "puppeteer";
 import unified = require('unified');
 // @ts-ignore TODO types
 import rehypeParse = require('rehype-parse');
@@ -283,6 +283,13 @@ export class PageApi {
 
     public close() {
         return this.page.close();
+    }
+
+    public evaluate<T extends EvaluateFn>(
+        pageFunction: T,
+        ...args: SerializableOrJSHandle[]
+    ): Promise<EvaluateFnReturnType<T>> {
+        return this.page.evaluate(pageFunction, ...args);
     }
 
     public getMetrics(): Promise<OriginalMetrics> {

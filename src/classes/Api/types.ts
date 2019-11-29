@@ -1,14 +1,20 @@
 import {ISite, ISiteWithWprArchiveId} from "@/types";
-import {BrowserApi, IBrowserLaunchOptions, IPageProfile, IPageStructureSizes} from "@/classes/Puppeteer";
+import {BrowserApi, IBrowserLaunchOptions, IPageProfile, PageApi, IPageStructureSizes} from "@/classes/Puppeteer";
 // import {DataProcessor} from "@/lib/dataProcessor";
 import DataProcessor from "@/classes/DataProcessor";
 import View from "@/classes/View";
+import {Logger} from "@/lib/logger";
+
+export interface IRecordWprHooks {
+    onVerifyWpr?: (logger: Logger, page: PageApi) => Promise<void>;
+}
 
 export interface IRecordWprConfig {
     id: number;
     site: ISite,
     browserLaunchOptions: IBrowserLaunchOptions,
     pageProfile: IPageProfile,
+    hooks?: IRecordWprHooks;
 }
 
 export interface IWprProcessOptions {

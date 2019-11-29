@@ -1,5 +1,6 @@
 import {NETWORK_PRESET_TYPES} from "@/classes/Puppeteer";
 import {IMetric, IMetricAggregation} from "@/classes/DataProcessor";
+import {IRecordWprHooks} from "@/classes/Api/types";
 
 export enum WatchingMetrics {
     requestStart = 'requestStart',
@@ -99,6 +100,7 @@ export interface IRawCompareReleasesConfig {
     };
     metrics?: IMetric[];
     metricAggregations?: IMetricAggregation[];
+    hooks: IRecordWprHooks;
 }
 
 export interface IComparation {

@@ -26,6 +26,18 @@ const schema = joi.object().required().keys({
         javascriptEnabled: joi.boolean().default(true),
         cssFilesEnabled: joi.boolean().default(true),
     }),
+    hosts: joi.array().required().items(joi.object().required().keys({
+        name: joi.string().required(),
+        host: joi.string().required().uri({scheme: ['http', 'https']})
+    })),
+    urls: joi.array().required().items(joi.object().required().keys({
+        name: joi.string().required(),
+        url: joi.string().required(),
+    })),
+    stages: joi.object().required().keys({
+        recordWpr: joi.boolean().default(true),
+        compareMetrics: joi.boolean().default(true)
+    }),
     metrics: joi.array().min(1).items(
         joi.object().keys({
             name: joi.string().required(),
@@ -39,18 +51,9 @@ const schema = joi.object().required().keys({
             excludeMetrics: joi.array().items(joi.string())
         })
     ),
-    hosts: joi.array().required().items(joi.object().required().keys({
-        name: joi.string().required(),
-        host: joi.string().required().uri({scheme: ['http', 'https']})
-    })),
-    urls: joi.array().required().items(joi.object().required().keys({
-        name: joi.string().required(),
-        url: joi.string().required(),
-    })),
-    stages: joi.object().required().keys({
-        recordWpr: joi.boolean().default(true),
-        compareMetrics: joi.boolean().default(true)
-    })
+    hooks: joi.object().keys({
+        onVerifyWpr: joi.func(),
+    }),
 });
 
 export default schema;

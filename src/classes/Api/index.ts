@@ -30,7 +30,7 @@ import eventIterator from "./eventIterator";
 import {
     ICompareEventIteratorOptions,
     ICompareMetricsOptions,
-    IRecordWprConfig, IWprPair,
+    IRecordWprConfig, IRecordWprHooks, IWprPair,
     IWprProcessOptions, IWprSize
 } from "./types";
 
@@ -126,7 +126,7 @@ export class Api {
         workDir: string,
         config: IRecordWprConfig,
     ): Promise<boolean> {
-        const {id, site, browserLaunchOptions, pageProfile} = config;
+        const {id, site, browserLaunchOptions, pageProfile, hooks} = config;
         this._logger.info(`recordWpr started: ${site.name} id=${id}`);
         await this.saveConfig(workDir, `${site.name}-${id}.record-wpr`, config);
 
@@ -161,6 +161,11 @@ export class Api {
             const page = bro.createDesktopOrMobilePage(site.mobile, workDir, pageProfile, site);
 
             await page.open();
+
+            if (hooks && hooks.onVerifyWpr) {
+                this._logger.debug("recordWpr: verify page with hooks.onVerifyWpr");
+                await hooks.onVerifyWpr(this._logger, page);
+            }
 
             // reload
             // await page.reload();
@@ -269,9 +274,10 @@ export class Api {
             sites: ISite[];
             browserLaunchOptions: IBrowserLaunchOptions;
             pageProfile: IPageProfile;
+            hooks?: IRecordWprHooks;
         },
     ) {
-        const {browserLaunchOptions, pageProfile} = options;
+        const {browserLaunchOptions, pageProfile, hooks} = options;
 
         const promises = [];
 
@@ -280,7 +286,8 @@ export class Api {
                 id: 0,
                 site,
                 browserLaunchOptions,
-                pageProfile
+                pageProfile,
+                hooks,
             }));
         }
 
@@ -294,16 +301,18 @@ export class Api {
             site: ISite;
             browserLaunchOptions: IBrowserLaunchOptions;
             pageProfile: IPageProfile;
+            hooks?: IRecordWprHooks;
         }
     ) {
-        const {recordCount, site, browserLaunchOptions, pageProfile} = options;
+        const {recordCount, site, browserLaunchOptions, pageProfile, hooks} = options;
 
         for (let id=0; id < recordCount; id++) {
             await this.recordWprWithRetry(workDir, {
                 id,
                 site,
                 browserLaunchOptions,
-                pageProfile
+                pageProfile,
+                hooks
             });
         }
     }
@@ -315,9 +324,10 @@ export class Api {
             sites: ISite[];
             browserLaunchOptions: IBrowserLaunchOptions;
             pageProfile: IPageProfile;
+            hooks: IRecordWprHooks;
         }
     ) {
-        const {recordCount, sites, browserLaunchOptions, pageProfile} = options;
+        const {recordCount, sites, browserLaunchOptions, pageProfile, hooks} = options;
 
         for (let id=0; id < recordCount; id++) {
             const promises = [];
@@ -326,7 +336,8 @@ export class Api {
                     id,
                     site,
                     browserLaunchOptions,
-                    pageProfile
+                    pageProfile,
+                    hooks,
                 }));
             }
 

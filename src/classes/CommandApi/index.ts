@@ -10,7 +10,7 @@ import {IBrowserLaunchOptions, IPageProfile, NETWORK_PRESET_TYPES} from "@/class
 
 import {Api} from "@/classes/Api";
 import compareReleasesConfigSchema from '@/validation/compareReleasesConfig';
-import {IWprPair} from "@/classes/Api/types";
+import {IRecordWprHooks, IWprPair} from "@/classes/Api/types";
 import View from "@/classes/View";
 
 export class CommandApi {
@@ -215,11 +215,18 @@ export class CommandApi {
             };
 
             if (rawConfig.stages.recordWpr) {
+                const hooks: IRecordWprHooks = {};
+
+                if (rawConfig.hooks && rawConfig.hooks.onVerifyWpr) {
+                    hooks.onVerifyWpr = rawConfig.hooks.onVerifyWpr;
+                }
+
                 await api.recordManyWprsForManySites(config.workDir, {
                     recordCount,
                     sites: config.sites,
                     browserLaunchOptions,
                     pageProfile: recordWprPageProfile,
+                    hooks,
                 });
             }
 
@@ -417,12 +424,19 @@ export class CommandApi {
             };
 
             if (rawConfig.stages.recordWpr) {
+                const hooks: IRecordWprHooks = {};
+
+                if (rawConfig.hooks && rawConfig.hooks.onVerifyWpr) {
+                    hooks.onVerifyWpr = rawConfig.hooks.onVerifyWpr;
+                }
+
                 // записать несколько wpr для каждого site
                 await api.recordManyWprsForManySites(config.workDir, {
                     recordCount,
                     sites: config.sites,
                     browserLaunchOptions,
                     pageProfile,
+                    hooks,
                 });
             }
 
