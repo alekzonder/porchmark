@@ -1079,52 +1079,39 @@ export class Api {
     ) {
         const {id, dataProcessor, site, browser, pageProfile, iterations} = options;
 
-        const metricNames = [
-            "fetchStart",
-            "domainLookupStart",
-            "domainLookupEnd",
-            "connectStart",
-            "connectEnd",
-            "requestStart",
-            "responseEnd",
-            "responseStart",
-            "domInteractive",
-            "domContentLoadedEventStart",
-            "domContentLoadedEventEnd",
-            "loadEventStart",
-            "loadEventEnd",
-            "domComplete",
-
-            'first-paint',
-            'first-contentful-paint',
-
-            "transferSize",
-            "encodedBodySize",
-            "decodedBodySize",
-        ];
-
-        function filterMetrics(metrics: OriginalMetrics) {
-            const filteredMetrics: any = {};
-
-            for (let name of metricNames) {
-                // for (let name of Object.keys(WatchingMetricsRealNames)) {
-                // @ts-ignore TODO fix types
-                filteredMetrics[name] = metrics[name];
-            }
-
-            return filteredMetrics;
-        }
-
-        // TODO remove
-        // function registerMetrics([originalMetrics, siteIndex]: [OriginalMetrics, number]): void {
-        //     const transformedMetrics: number[] = [];
+        // const metricNames = [
+        //     "fetchStart",
+        //     "domainLookupStart",
+        //     "domainLookupEnd",
+        //     "connectStart",
+        //     "connectEnd",
+        //     "requestStart",
+        //     "responseEnd",
+        //     "responseStart",
+        //     "domInteractive",
+        //     "domContentLoadedEventStart",
+        //     "domContentLoadedEventEnd",
+        //     "loadEventStart",
+        //     "loadEventEnd",
+        //     "domComplete",
         //
-        //     for (let metricIndex = 0; metricIndex < watchingMetrics.length; metricIndex++) {
-        //         const metricName = watchingMetricsRealNames[metricIndex];
-        //         transformedMetrics[metricIndex] = originalMetrics[metricName];
+        //     'first-paint',
+        //     'first-contentful-paint',
+        //
+        //     "transferSize",
+        //     "encodedBodySize",
+        //     "decodedBodySize",
+        // ];
+        //
+        // function filterMetrics(metrics: OriginalMetrics) {
+        //     const filteredMetrics: any = {};
+        //
+        //     for (let name of metricNames) {
+        //         // @ts-ignore TODO fix types
+        //         filteredMetrics[name] = metrics[name];
         //     }
         //
-        //     dataProcessor.registerMetrics(siteIndex, transformedMetrics);
+        //     return filteredMetrics;
         // }
 
         async function registerMetrics(metrics: IOriginalMetrics) {
@@ -1137,12 +1124,12 @@ export class Api {
         const entriesStream = fs.createWriteStream(this._getPerformanceEntriesFilepath(workDir, site, id, wprArchiveId));
 
         const writeMetrics = (iteration: number, metrics: OriginalMetrics) => {
-            const filteredMetrics = filterMetrics(metrics);
+            // const filteredMetrics = filterMetrics(metrics);
 
             const json = JSON.stringify({
                 iteration,
                 name: site.name,
-                ...filteredMetrics,
+                ...metrics,
             });
             metricsStream.write(`${json}\n`);
         };
