@@ -794,7 +794,7 @@ export class Api {
 
         const parseFilenameRegex = /(.*)-(\d+)\.wprgo/;
 
-        const wprs: IWprSize[] = await Promise.all(wprFiles
+        const rawWprs: (IWprSize | null)[] = await Promise.all(wprFiles
             .map(async (filename: string) => {
                 const match = parseFilenameRegex.exec(filename);
 
@@ -805,19 +805,32 @@ export class Api {
                 const siteName = match[1];
                 const wprArchiveId = Number(match[2]);
 
-                const pageStructureSizes = await fs.readJson(
-                    this._getPageStructureSizesFilepath(workDir, {name: siteName, url: ''}, wprArchiveId)
-                );
+                try {
+                    const pageStructureSizes = await fs.readJson(
+                        this._getPageStructureSizesFilepath(workDir, {name: siteName, url: ''}, wprArchiveId)
+                    );
 
+                    return {
+                        filename,
+                        siteName,
+                        wprArchiveId,
+                        size: -1, // TODO
+                        pageStructureSizes,
+                    };
+                } catch (error) {
+                    if (error.code === 'ENOENT') {
+                        this._logger.warn(
+                            `skip wpr for site=${siteName} wprArchiveId=${wprArchiveId}, no pageStructureSizes`
+                        );
+                        return null;
+                    }
 
-                return {
-                    filename,
-                    siteName,
-                    wprArchiveId,
-                    size: -1, // TODO
-                    pageStructureSizes,
-                };
+                    throw new Error(error);
+                }
             }));
+
+        // @ts-ignore filtering wprs
+        const wprs: IWprSize[] = rawWprs.filter(d => d != null);
 
         const sizes = await Promise.all(
             wprs.map(({filename}) => this._getFileSize(path.resolve(workDir, filename)))
