@@ -1,4 +1,4 @@
-import {NETWORK_PRESET_TYPES} from "@/classes/Puppeteer";
+import {IPageStructureSizesHooks, NETWORK_PRESET_TYPES} from "@/classes/Puppeteer";
 import {IMetric, IMetricAggregation} from "@/classes/DataProcessor";
 import {ICompareMetricsHooks, IRecordWprHooks} from "@/classes/Api/types";
 
@@ -100,7 +100,7 @@ export interface IRawCompareReleasesConfig {
     };
     metrics?: IMetric[];
     metricAggregations?: IMetricAggregation[];
-    hooks: IRecordWprHooks & ICompareMetricsHooks;
+    hooks: IRecordWprHooks & ICompareMetricsHooks & IPageStructureSizesHooks;
 }
 
 export interface IComparation {

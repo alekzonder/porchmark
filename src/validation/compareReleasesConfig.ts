@@ -54,6 +54,8 @@ const schema = joi.object().required().keys({
     hooks: joi.object().keys({
         onVerifyWpr: joi.func(),
         onCollectMetrics: joi.func(),
+        onPageStructureSizesNode: joi.func(),
+        onPageStructureSizesComplete: joi.func(),
     }),
 });
 

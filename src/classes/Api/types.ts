@@ -1,5 +1,12 @@
 import {ISite, ISiteWithWprArchiveId} from "@/types";
-import {BrowserApi, IBrowserLaunchOptions, IPageProfile, PageApi, IPageStructureSizes} from "@/classes/Puppeteer";
+import {
+    BrowserApi,
+    IBrowserLaunchOptions,
+    IPageProfile,
+    PageApi,
+    IPageStructureSizes,
+    IPageStructureSizesHooks
+} from "@/classes/Puppeteer";
 // import {DataProcessor} from "@/lib/dataProcessor";
 import DataProcessor from "@/classes/DataProcessor";
 import View from "@/classes/View";
@@ -18,7 +25,7 @@ export interface IRecordWprConfig {
     site: ISite,
     browserLaunchOptions: IBrowserLaunchOptions,
     pageProfile: IPageProfile,
-    hooks?: IRecordWprHooks & ICompareMetricsHooks;
+    hooks?: IRecordWprHooks & ICompareMetricsHooks & IPageStructureSizesHooks;
 }
 
 export interface IWprProcessOptions {

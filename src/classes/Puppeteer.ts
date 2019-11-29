@@ -99,6 +99,15 @@ export interface IPageStructureSizes {
     };
 }
 
+export interface IPageStructureSizesHooks {
+    onPageStructureSizesNode?: (sizes: IPageStructureSizes, node: any) => void;
+    onPageStructureSizesComplete?: (
+        sizes: IPageStructureSizes,
+        html: string,
+        getSizeInBytes: (html: string, start: number, end: number) => number,
+    ) => void;
+}
+
 export class PuppeteerApi {
     protected _logger: Logger;
 
@@ -315,7 +324,7 @@ export class PageApi {
         });
     }
 
-    public async getPageStructureSizes(): Promise<IPageStructureSizes> {
+    public async getPageStructureSizes(hooks: IPageStructureSizesHooks): Promise<IPageStructureSizes> {
         const html = await this.getHTML();
 
         var tree = unified()
@@ -355,7 +364,7 @@ export class PageApi {
         });
 
         const sizes: IPageStructureSizes = {
-            root: this._getSizeInBytes(html, elements[1]),
+            root: this._getNodeSizeInBytes(html, elements[1]),
             script: 0,
             style: 0,
             scripts: {},
@@ -364,8 +373,12 @@ export class PageApi {
         Object.keys(elements).forEach(id => {
             const node = elements[id];
 
+            if (hooks && hooks.onPageStructureSizesNode) {
+                hooks.onPageStructureSizesNode(sizes, node);
+            }
+
             if (node.tagName === 'script') {
-                const size = this._getSizeInBytes(html, node);
+                const size = this._getNodeSizeInBytes(html, node);
                 sizes.script += size;
 
                 const scriptType = node.properties && node.properties.type;
@@ -378,15 +391,23 @@ export class PageApi {
             }
 
             if (node.tagName === 'style') {
-                const size = this._getSizeInBytes(html, node);
+                const size = this._getNodeSizeInBytes(html, node);
                 sizes.style += size;
             }
         });
 
+        if (hooks && hooks.onPageStructureSizesComplete) {
+            hooks.onPageStructureSizesComplete(sizes, html, this._getSizeInBytes);
+        }
+
         return  sizes;
     }
 
-    private _getSizeInBytes(html: string, node: any) {
+    private _getNodeSizeInBytes(html: string, node: any) {
         return Buffer.byteLength(html.substring(node.position.start.offset, node.position.end.offset), 'utf8');
     }
+
+    private _getSizeInBytes = (html: string, start: number, end: number) => {
+        return Buffer.byteLength(html.substring(start, end), 'utf8');
+    };
 }

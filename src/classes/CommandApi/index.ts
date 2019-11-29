@@ -6,7 +6,7 @@ import {
     ISite,
     // WatchingMetricsRealNames
 } from "@/types";
-import {IBrowserLaunchOptions, IPageProfile, NETWORK_PRESET_TYPES} from "@/classes/Puppeteer";
+import {IBrowserLaunchOptions, IPageProfile, IPageStructureSizesHooks, NETWORK_PRESET_TYPES} from "@/classes/Puppeteer";
 
 import {Api} from "@/classes/Api";
 import compareReleasesConfigSchema from '@/validation/compareReleasesConfig';
@@ -217,10 +217,20 @@ export class CommandApi {
             };
 
             if (rawConfig.stages.recordWpr) {
-                const hooks: IRecordWprHooks = {};
+                const hooks: IRecordWprHooks & IPageStructureSizesHooks = {};
 
-                if (rawConfig.hooks && rawConfig.hooks.onVerifyWpr) {
-                    hooks.onVerifyWpr = rawConfig.hooks.onVerifyWpr;
+                if (rawConfig.hooks) {
+                    if (rawConfig.hooks.onVerifyWpr) {
+                        hooks.onVerifyWpr = rawConfig.hooks.onVerifyWpr;
+                    }
+
+                    if (rawConfig.hooks.onPageStructureSizesNode) {
+                        hooks.onPageStructureSizesNode = rawConfig.hooks.onPageStructureSizesNode;
+                    }
+
+                    if (rawConfig.hooks.onPageStructureSizesComplete) {
+                        hooks.onPageStructureSizesComplete = rawConfig.hooks.onPageStructureSizesComplete;
+                    }
                 }
 
                 await api.recordManyWprsForManySites(config.workDir, {

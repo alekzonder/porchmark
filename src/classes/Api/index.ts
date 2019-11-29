@@ -21,7 +21,13 @@ import {
 import findFreePort from "@/modules/find-free-port";
 import * as fs from "@/modules/fs";
 import {IWprConfig, WprRecord, WprReplay} from "@/classes/Wpr";
-import {BrowserApi, IBrowserLaunchOptions, IPageProfile, PuppeteerApi} from "@/classes/Puppeteer";
+import {
+    BrowserApi,
+    IBrowserLaunchOptions,
+    IPageProfile,
+    IPageStructureSizesHooks,
+    PuppeteerApi
+} from "@/classes/Puppeteer";
 import DataProcessor, {IDataProcessorConfig, IOriginalMetrics, IReport} from '@/classes/DataProcessor';
 // import {DataProcessor} from "@/lib/dataProcessor";
 import {Logger} from "@/lib/logger";
@@ -170,7 +176,17 @@ export class Api {
             // reload
             // await page.reload();
 
-            const pageSizesAfterLoaded = await page.getPageStructureSizes();
+            const pageSizesAfterLoadedHooks: IPageStructureSizesHooks = {};
+
+            if (hooks && hooks.onPageStructureSizesNode) {
+                pageSizesAfterLoadedHooks.onPageStructureSizesNode = hooks.onPageStructureSizesNode;
+            }
+
+            if (hooks && hooks.onPageStructureSizesComplete) {
+                pageSizesAfterLoadedHooks.onPageStructureSizesComplete = hooks.onPageStructureSizesComplete;
+            }
+
+            const pageSizesAfterLoaded = await page.getPageStructureSizes(pageSizesAfterLoadedHooks);
             await fs.writeJson(this._getPageStructureSizesAfterLoadedFilepath(workDir, site, id), pageSizesAfterLoaded);
 
             // save screenshot
@@ -203,7 +219,7 @@ export class Api {
         workDir: string,
         config: IRecordWprConfig,
     ) {
-        const {id, site, browserLaunchOptions, pageProfile} = config;
+        const {id, site, browserLaunchOptions, pageProfile, hooks} = config;
         this._logger.info(`getPageStructureSizes started: ${site.name} id=${id}`);
 
         const [httpPort, httpsPort] = await this._findTwoFreePorts();
@@ -246,7 +262,17 @@ export class Api {
             // reload
             // await page.reload();
 
-            const pageSizes = await page.getPageStructureSizes();
+            const pageSizesHooks: IPageStructureSizesHooks = {};
+
+            if (hooks && hooks.onPageStructureSizesNode) {
+                pageSizesHooks.onPageStructureSizesNode = hooks.onPageStructureSizesNode;
+            }
+
+            if (hooks && hooks.onPageStructureSizesComplete) {
+                pageSizesHooks.onPageStructureSizesComplete = hooks.onPageStructureSizesComplete;
+            }
+
+            const pageSizes = await page.getPageStructureSizes(pageSizesHooks);
             await fs.writeJson(this._getPageStructureSizesFilepath(workDir, site, id), pageSizes);
 
             // save screenshot
