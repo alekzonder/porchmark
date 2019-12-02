@@ -46,7 +46,7 @@ const schema = joi.object().required().keys({
     ),
     metricAggregations: joi.array().min(1).items(
         joi.object().keys({
-            name: joi.string().required().valid(['q50', 'q80', 'q95', 'count', 'stdev']),
+            name: joi.string().required().valid(...['q50', 'q80', 'q95', 'count', 'stdev']),
             includeMetrics: joi.array().items(joi.string()),
             excludeMetrics: joi.array().items(joi.string())
         })
